@@ -1,0 +1,19 @@
+type NATIVE_INT_TYPE
+type NATIVE_UINT_TYPE
+type POINTER_CAST
+
+type FwChanIdType
+type FwDpIdType
+type FwDpPriorityType
+type FwEnumStoreType
+type FwEventIdType
+type FwIndexType
+type FwOpcodeType
+type FwPacketDescriptorType
+type FwPrmIdType
+type FwSignedSizeType
+type FwSizeStoreType
+type FwSizeType
+type FwTimeBaseStoreType
+type FwTimeContextStoreType
+type FwTlmPacketizeIdType

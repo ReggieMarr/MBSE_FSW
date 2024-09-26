@@ -1,0 +1,32 @@
+@startuml
+
+[*] --> IDLE:  /initFlightStatus()
+
+state IDLE {
+}
+
+state IN_FLIGHT {
+    [*] --> FIRING
+    IN_FLIGHT:Entry: initFlightStatus()
+    'FIXME consolidate this and the TBURN interval
+    IN_FLIGHT:Internal: UPDATE_INTERVAL/updateFlightStatus()
+
+    state FIRING {
+        FIRING:Entry: engageThrust()
+    }
+    state GLIDING {
+        GLIDING:Entry: disengageThrust()
+        GLIDING:Internal: UPDATE_INTERVAL/updateFlightStatus(); checkLowAltReached()
+    }
+    'NOTE this should probably be replaced by an event
+    'but we wanted to play with conditions here
+    state tBurnCheck <<choice>>
+    FIRING --> tBurnCheck: TBURN_CHECK_INTERVAL
+    tBurnCheck --> GLIDING: [isTBurnReached()]
+
+}
+
+IDLE --> IN_FLIGHT: IGNITE
+IN_FLIGHT --> IDLE: TERMINATE
+
+@enduml

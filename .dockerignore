@@ -1,0 +1,42 @@
+# Exclude the submodule since we'll use git to grab it or mount it in a container
+fprime
+
+# Exclude large parts of .git, but keep essential files
+**/.git/objects/pack/
+**/.git/logs/
+**/.git/hooks/
+**/.git/worktrees/
+
+# Keep essential Git files
+!**/.git/HEAD
+!**/.git/config
+!**/.git/refs
+!**/.git/objects/info/packs
+!**/.git/index
+# For submodules, keep essential files
+!**/.git/modules/**/HEAD
+!**/.git/modules/**/config
+!**/.git/modules/**/refs
+!**/.git/modules/**/objects/info/packs
+!**/.git/modules/**/index
+
+# Exclude non-functional files
+**/FlightComputer/build*
+*.png
+*.pdf
+*.jpg
+*.html
+*.md
+*.patch
+
+**dev_deps
+# Ignore other common directories and files
+node_modules
+*logs
+*.log
+*.tmp
+*.temp
+.DS_Store
+**/build
+**/__pycache__
+**/dist

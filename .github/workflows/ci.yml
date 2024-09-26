@@ -1,0 +1,99 @@
+name: CI
+
+on:
+  push:
+    branches: [ '*' ]
+  pull_request:
+    branches: [ '*' ]
+
+env:
+  FSW_IMG_BASE: ghcr.io/reggiemarr/mbse_fsw
+
+jobs:
+  check-docker-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      docker_changed: ${{ steps.check_files.outputs.docker_changed }}
+    steps:
+    - uses: actions/checkout@v2
+    - name: Check if Docker-related files changed
+      id: check_files
+      run: |
+        git fetch origin ${{ github.event.before }}
+        CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }})
+        if echo "$CHANGED_FILES" | grep -q -E "Dockerfile|.env|docker-compose.yml|.github/workflows|entrypoint.sh"; then
+          echo "Docker-related files changed"
+          echo "docker_changed=true" >> $GITHUB_OUTPUT
+        else
+          echo "No Docker-related files changed"
+          echo "docker_changed=false" >> $GITHUB_OUTPUT
+        fi
+
+  build-docker:
+    permissions:
+        contents: read
+        packages: write
+
+    needs: check-docker-changes
+    if: needs.check-docker-changes.outputs.docker_changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: 'recursive'
+
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Build and push Docker image
+      run: |
+        FSW_IMG_TAG=fsw_$(echo ${GITHUB_REF#refs/heads/} | sed 's/\//_/g')
+        FSW_IMG=${{ env.FSW_IMG_BASE }}:$FSW_IMG_TAG
+        echo "Building and pushing $FSW_IMG"
+        ./run.sh docker-build --clean
+        docker push $FSW_IMG
+        echo "FSW_IMG_TAG=$FSW_IMG_TAG" >> $GITHUB_OUTPUT
+
+  build-and-run-fsw:
+    needs: [check-docker-changes, build-docker]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: 'recursive'
+
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Set Docker tag
+      run: |
+        FSW_IMG_TAG=fsw_$(echo ${GITHUB_REF#refs/heads/} | sed 's/\//_/g')
+        echo "FSW_IMG_TAG=$FSW_IMG_TAG" >> $GITHUB_ENV
+        echo "FSW_IMG=${{ env.FSW_IMG_BASE }}:$FSW_IMG_TAG" >> $GITHUB_ENV
+
+    - name: Pull Docker image
+      run: docker pull ${{ env.FSW_IMG }}
+
+    - name: Build and run FSW
+      run: |
+        echo "Using image ${{ env.FSW_IMG }}"
+        ./run.sh build --clean
+        DOWNLINK_TARGET_PORT=50051 UPLINK_TARGET_PORT=50001 ./run.sh gds& disown
+        DOWNLINK_TARGET_PORT=50051 UPLINK_TARGET_PORT=50001 ./run.sh exec --local
+        ./run.sh teardown
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-artifacts
+        path: |
+          ./FlightComputer/build-artifacts/
+          ./FlightComputer/build-fprime-automatic-native/compile_commands.json

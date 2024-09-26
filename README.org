@@ -1,0 +1,162 @@
+#+title: README
+* Overview
+This project demonstrates an [[https://nasa.github.io/fprime/][fprime]] powered flight software deployment which leverages state machines and other MBSE type models to generate code.
+
+** Getting Started
+*** Dependencies
+The project is containerized with Docker, ensuring compatibility across various environments including Ubuntu and WSL (Windows Subsystem for Linux). Before proceeding, ensure you have the following dependencies installed:
+
+- Git (For cloning the repository): [[https://git-scm.com/book/en/v2/Getting-Started-Installing-Git][Installation Guide]]
+- Docker (For running the software) : [[https://docs.docker.com/engine/install/][Installation Guide]]
+
+[[https://docs.docker.com/engine/install/linux-postinstall/][Ensure Docker is configured to run without ~sudo~ in your environment]]
+*** Setting up the repo
+**** Clone the repo and submodules
+#+BEGIN_SRC bash
+#Get the repo
+git clone git@github.com:ReggieMarr/MBSE_FSW.git
+cd MBSE_FSW
+#pull in the submodules
+git submodule update --init --recursive
+#+END_SRC
+** Example Usage
+The flight software ships with a script ~run.sh~ which can be used to simplify development and interaction with this repo's assets.
+Commands are summarized as such:
+
+#+begin_src plantuml :file .org_out/run.png :tangle .org_out/run.puml :exports results
+@startuml
+skinparam actorStyle awesome
+actor User
+
+rectangle "run.sh Script" {
+  [Docker Build]
+  [Project Build]
+  [Container Inspection]
+  [FlightSoftware Execution]
+  [GDS Execution]
+  [Dependency Generation]
+  [Environment Teardown]
+}
+
+cloud "Docker Environment" {
+  [Docker Image]
+  [FSW Container]
+  [GDS Container]
+}
+
+database "Host File System" {
+  folder "Project Files"
+  folder "Build Artifacts"
+  folder "Dependencies"
+}
+
+User --> [Docker Build] : docker-build
+User --> [Project Build] : build
+User --> [Container Inspection] : inspect
+User --> [FlightSoftware Execution] : exec
+User --> [GDS Execution] : gds
+User --> [Dependency Generation] : gen-deps
+User --> [Environment Teardown] : teardown
+
+[Docker Build] --> [Docker Image] : Creates/Updates
+[Project Build] --> [Build Artifacts] : Generates
+[Container Inspection] --> [FSW Container] : Provides shell
+[FlightSoftware Execution] --> [FSW Container] : Runs FlightSoftware
+[GDS Execution] --> [GDS Container] : Runs GDS
+[Dependency Generation] --> [Dependencies] : Extracts
+[Environment Teardown] --> [Docker Environment] : Removes containers
+
+@enduml
+#+end_src
+
+#+RESULTS:
+[[file:.org_out/run.png]]
+
+The script supports a number of useful commands.
+Tab completion is enabled by entering the following:
+#+BEGIN_SRC bash
+source .gen-run-complete.sh
+#+END_SRC
+
+#+BEGIN_SRC bash
+❯ ./run.sh --help
+Usage: run.sh [OPTIONS] COMMAND
+
+Options:
+  --daemon             Run as daemon
+  --debug              Enable debug mode
+  --as-host            Run as host
+  --local              Use local environment
+  --clean              Clean build
+  --host-thread-ctl    Set thread control
+  --help               Show this help message
+
+Commands:
+  docker-build         Build the Docker image
+  build                Build the project
+  inspect [container]  Inspect a container
+  exec                 Execute the FlightSoftware
+  gds                  Run the GDS
+  gen-deps             Generate dependencies (for editor mapping)
+  teardown             Tear down the environment
+#+END_SRC
+
+One use case is building and running the deployment, this can be done like so (note building clean is only necessary when ):
+#+begin_src bash
+❯ ./run.sh build --clean && ./run.sh exec --local
+#+end_src
+
+This then provides a web based ui that can be viewed by visiting http://127.0.0.1:5000/#Channels on your preferred web browser.
+
+[[file:.org_out/GDS_Screenshot.png][GDS Screenshot]]
+
+*Note* this example runs a standard version of ~fprime-gds~ and deploys it locally.
+More information about the Web UI can be found [[https://nasa.github.io/fprime/UsersGuide/gds/gds-introduction.html][here]].
+*** Additional Tips
+   - Combine flags: ~./run.sh --clean --debug exec~
+   - Script uses environment variables from .env file in the same directory
+   - Use ~--daemon~ flag to run processes in the background
+   - Use ~--host-thread-ctl~ when building for non-sudo host execution thread control
+
+   Note: Ensure proper permissions and Docker setup before running commands.
+
+* Flight Sequence State Machine
+The following state machine is fed as input to [[https://github.com/JPLOpenSource/STARS][STARS]] which then generates ~fpp~ and ~c++~ as output.
+
+#+BEGIN_SRC plantuml :tangle ./FlightSoftware/FlightSequencer/FlightSM.plantuml :exports both :file ./FlightComputer/FlightSequencer/FlightSM.png
+@startuml
+
+[*] --> IDLE:  /initFlightStatus()
+
+state IDLE {
+}
+
+state IN_FLIGHT {
+    [*] --> FIRING
+    IN_FLIGHT:Entry: initFlightStatus()
+    'FIXME consolidate this and the TBURN interval
+    IN_FLIGHT:Internal: UPDATE_INTERVAL/updateFlightStatus()
+
+    state FIRING {
+        FIRING:Entry: engageThrust()
+    }
+    state GLIDING {
+        GLIDING:Entry: disengageThrust()
+        GLIDING:Internal: UPDATE_INTERVAL/updateFlightStatus(); checkLowAltReached()
+    }
+    'NOTE this should probably be replaced by an event
+    'but we wanted to play with conditions here
+    state tBurnCheck <<choice>>
+    FIRING --> tBurnCheck: TBURN_CHECK_INTERVAL
+    tBurnCheck --> GLIDING: [isTBurnReached()]
+
+}
+
+IDLE --> IN_FLIGHT: IGNITE
+IN_FLIGHT --> IDLE: TERMINATE
+
+@enduml
+#+END_SRC
+
+#+RESULTS:
+[[file:./FlightComputer/FlightSequence/FlightSM.png]]
