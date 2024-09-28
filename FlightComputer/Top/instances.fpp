@@ -63,7 +63,7 @@ module FlightComputer {
   instance pingRcvr: FlightComputer.PingReceiver base id 0x0A00 \
     queue size Default.queueSize \
     stack size Default.stackSize \
-    priority 100
+    priority 99
 
   instance eventLogger: Svc.ActiveLogger base id 0x0B00 \
     queue size Default.queueSize \

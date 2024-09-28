@@ -1,6 +1,6 @@
 services:
   gds:
-    stop_grace_period: 1s
+    stop_grace_period: 3s
     user: user
     build:
       context: .
@@ -10,6 +10,7 @@ services:
           - HOST_GID=${HOST_GID:-1000}
           - progress=plain
     image: $FSW_IMG
+    command: "fprime-gds -n --ip-port=$UPLINK_TARGET_PORT --tts-port=$DOWNLINK_TARGET_PORT --dictionary ./dict/FlightComputerTopologyAppDictionary.xml"
     working_dir: ${DEPLOYMENT_ROOT}/build-artifacts/Linux/FlightComputer/
     ports:
       - $GDB_PORT:5555
@@ -24,7 +25,7 @@ services:
       interval: 2s
       timeout: 3s
       retries: 25
-      start_period: 5s
+      start_period: 3s
   fsw:
     stop_grace_period: 1s
     user: user
@@ -66,3 +67,7 @@ services:
       timeout: 3s
       retries: 25
       start_period: 5s
+    depends_on:
+      gds:
+        condition: service_healthy
+        restart: true

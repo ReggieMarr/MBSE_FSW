@@ -268,6 +268,11 @@ case $1 in
     else
       FLAGS="${FLAGS} -w /MBSE_FSW/deploy/ --no-deps"
       RUN_CMD="docker compose run --rm -it fsw python3 fswCtrl.py"
+      FLAGS="${FLAGS} --no-deps"
+    fi
+
+    if [ "${DAEMON}" -eq "1" ]; then
+      FLAGS="${FLAGS} -d"
     fi
 
     RUN_CMD="${RUN_CMD} ./FlightComputer -a ${GDS_IP} -u ${UPLINK_TARGET_PORT} -d ${DOWNLINK_TARGET_PORT}"
@@ -291,8 +296,20 @@ case $1 in
     check_port ${DOWNLINK_TARGET_PORT}
     check_port ${UPLINK_TARGET_PORT}
 
+    FLAGS="-it --rm"
+    if [ "${DAEMON}" -eq "1" ]; then
+      FLAGS="-i -d"
+    fi
+    FLAGS="-w ${BIN_DIR}"
+
     CMD="fprime-gds -n --ip-port=$UPLINK_TARGET_PORT --tts-port=$DOWNLINK_TARGET_PORT --dictionary ./dict/FlightComputerTopologyAppDictionary.xml"
     CMD="docker compose run -it --rm gds $CMD"
+    echo $CMD
+    eval $CMD
+    ;;
+  "smoke-test")
+    CMD="fprime-util visualize --working-dir $FSW_WDIR/public"
+    CMD="docker compose run -it --rm -w $DEPLOYMENT_ROOT/Top fsw $CMD"
     echo $CMD
     eval $CMD
     ;;
