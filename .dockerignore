@@ -1,5 +1,6 @@
 # Exclude the submodule since we'll use git to grab it or mount it in a container
 fprime
+fprime-gds
 
 # Exclude large parts of .git, but keep essential files
 **/.git/objects/pack/

@@ -74,8 +74,8 @@ ENV PATH="/home/user/.local/bin:${PATH}"
 USER root
 RUN pip install setuptools setuptools_scm wheel pip fprime-tools && \
     pip install -r $FSW_WDIR/fprime/requirements.txt && \
+    pip install -e $FSW_WDIR/fprime-gds && \
     pip install pytest debugpy pyinfra asyncio asyncssh gitpython python-dotenv
-
 
 FROM fprime_src AS stars_base
 
