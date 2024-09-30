@@ -38,7 +38,8 @@ namespace FlightComputer {
 
   // Check if T-burn time is reached using Fw::Time
   bool FlightSequencer::FlightSM_isTBurnReached(const FwEnumStoreType stateMachineId) {
-    Fw::Time currentTime = Fw::Time(status.getflightTimeS(), 0);  // Get the current time
+
+    Fw::Time currentTime = Fw::Time(timeCnt++, 0);  // Get the current time
     Fw::Time burnDuration = Fw::Time(250, 0); // Burn time (tburn) in seconds
     return currentTime >= burnDuration;        // Check if burn time is reached
   }
@@ -59,8 +60,10 @@ namespace FlightComputer {
   void FlightSequencer::FlightSM_initFlightStatus(const FwEnumStoreType stateMachineId) {
     // Reset the flight status to start simulation
     Fw::Logger::log("Init flight status\n");
+    timeCnt = 0;
+    velocity = 0;
 
-    status.set(0, false, 0.0, 0.0, FlightSequencer_FlightSMStates::IDLE); // Reset time, engine state, altitude, and velocity
+    status.set(false, 0.0, FlightSequencer_FlightSMStates::IDLE); // Reset time, engine state, altitude, and velocity
   }
 
   // Engage thrust (transition from Idle to Powered flight)
@@ -78,7 +81,7 @@ namespace FlightComputer {
   // Update flight status using Fw::Time for time intervals
   void FlightSequencer::FlightSM_updateFlightStatus(const FwEnumStoreType stateMachineId) {
     // Get current status parameters
-    F32 velocity = status.getvelocityMS();      // Get current velocity
+    // F32 velocity = 0;//status.getvelocityMS();      // Get current velocity
     F32 altitude = status.getaltitudeM();       // Get current altitude
 
     Fw::Time dt = Fw::Time(1, 0);               // Define a 1-second timestep
@@ -94,8 +97,8 @@ namespace FlightComputer {
     altitude += velocity * dt.getSeconds();      // Update altitude based on new velocity
     
     // Update time, velocity, and altitude in the status
-    status.setflightTimeS(status.getflightTimeS() + dt.getSeconds());          // Increment current time by dt
-    status.setvelocityMS(velocity);             // Set updated velocity
+    // status.setflightTimeS(status.getflightTimeS() + dt.getSeconds());          // Increment current time by dt
+    // status.setvelocityMS(velocity);             // Set updated velocity
     status.setaltitudeM(altitude);              // Set updated altitude
   }
 
@@ -107,7 +110,6 @@ namespace FlightComputer {
   {
     FlightSequencerComponentBase::init(queueDepth, instance);
     flightSM.init(this->stateMachineId);
-    status.set(0, false, 0.0, 0.0, FlightSequencer_FlightSMStates::IDLE); // Reset time, engine state, altitude, and velocity
     Fw::Logger::log("SM state on init %d\n", flightSM.state);
   }
 

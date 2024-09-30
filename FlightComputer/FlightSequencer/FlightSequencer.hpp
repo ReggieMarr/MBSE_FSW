@@ -53,6 +53,8 @@ namespace FlightComputer {
         FlightSM_Signals lastSignal = FlightSM_Signals::TERMINATE_SIG;
         FwEnumStoreType stateMachineId = 1;
         Os::Mutex signalLock;
+        U32 timeCnt =0;
+        F32 velocity =0;
 
         bool updateTlms();
 

@@ -292,6 +292,18 @@ case $1 in
     exit_code=$?
     if [ $exit_code -eq 1 ] || [ $exit_code -eq 2 ]; then exit 0; else exit $exit_code; fi
     ;;
+  "test")
+    FLAGS="-it --rm"
+    if [ "${DAEMON}" -eq "1" ]; then
+      FLAGS="-i -d"
+    fi
+    FLAGS="-w ${DEPLOYMENT_ROOT}"
+
+    CMD="pytest -s -v"
+    CMD="docker compose run $FLAGS gds $CMD"
+    echo $CMD
+    eval $CMD
+    ;;
   "gds")
     check_port ${DOWNLINK_TARGET_PORT}
     check_port ${UPLINK_TARGET_PORT}
@@ -300,16 +312,10 @@ case $1 in
     if [ "${DAEMON}" -eq "1" ]; then
       FLAGS="-i -d"
     fi
-    FLAGS="-w ${BIN_DIR}"
+    FLAGS="-w ${DICT_DIR}"
 
-    CMD="fprime-gds -n --ip-port=$UPLINK_TARGET_PORT --tts-port=$DOWNLINK_TARGET_PORT --dictionary ./dict/FlightComputerTopologyDictionary.json"
-    CMD="docker compose run -it --rm gds $CMD"
-    echo $CMD
-    eval $CMD
-    ;;
-  "smoke-test")
-    CMD="fprime-util visualize --working-dir $FSW_WDIR/public"
-    CMD="docker compose run -it --rm -w $DEPLOYMENT_ROOT/Top fsw $CMD"
+    CMD="fprime-gds -n --ip-port=$UPLINK_TARGET_PORT --tts-port=$DOWNLINK_TARGET_PORT --dictionary ./FlightComputerTopologyAppDictionary.xml"
+    CMD="docker compose run $FLAGS gds $CMD"
     echo $CMD
     eval $CMD
     ;;

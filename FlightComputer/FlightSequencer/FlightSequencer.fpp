@@ -13,10 +13,10 @@ module FlightComputer {
 
 
     struct status {
-        flightTimeS: F32
+        # flightTimeS: F32
         isEngineOn: bool
         altitudeM: F32
-        velocityMS: F32
+        # velocityMS: F64
         currentState: FlightSMStates
     }
 
@@ -61,7 +61,7 @@ module FlightComputer {
     # Telemetry
     # ----------------------------------------------------------------------
 
-    telemetry flightStatus: status update on change
+    telemetry flightStatus: status
   }
 
 }

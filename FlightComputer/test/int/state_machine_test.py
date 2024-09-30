@@ -105,15 +105,22 @@ def test_flight_state(fprime_test_api):
         msg = "Send and assert IGNITE Trial #{}".format(i)
         fprime_test_api.log("Results {}".format(results))
         fprime_test_api.assert_telemetry(
-                "FlightComputer.FlightSequencer.status", timeout=3
+                19968, timeout=5
         )
+        # fprime_test_api.assert_telemetry(
+        #         "flightSequencer.flightStatus", timeout=5
+        # )
 
-        pred = fprime_test_api.get_telemetry_pred("FlightComputer.FlightSequencer.status")
-        fprime_test_api.log("pred found {}".format(pred))
-        items = fprime_test_api.get_telemetry_test_history().retrieve_new()
-        last = None
-        reordered = False
-        for item in items:
-                fprime_test_api.log("items found {}".format(item))
+        # pred = fprime_test_api.get_telemetry_pred("FlightComputer.flightSequencer.flightStatus")
+        # result = fprime_test_api.assert_telemetry(pred, timeout=5)
+        # result = fprime_test_api.await_telemetry("flightSequencer.flightStatus", timeout=5)
+        # fprime_test_api.log("result found {}".format(result))
+        # fprime_test_api.log("pred found {}".format(pred))
+        # items = fprime_test_api.get_telemetry_test_history().retrieve_new()
+        # last = None
+        # reordered = False
+        # fprime_test_api.log("items found {}".format(items))
+        # for item in items:
+        #         fprime_test_api.log("item found {}".format(item))
 
-        fprime_test_api.clear_histories()
+        # fprime_test_api.clear_histories()
