@@ -3,16 +3,7 @@ from enum import Enum
 from pathlib import Path
 
 from fprime_gds.common.testing_fw import predicates
-from fprime_gds.common.utils.event_severity import EventSeverity
 
-
-"""
-This enum is includes the values of EventSeverity that can be filtered by the ActiveLogger Component
-"""
-FilterSeverity = Enum(
-    "FilterSeverity",
-    "WARNING_HI WARNING_LO COMMAND ACTIVITY_HI ACTIVITY_LO DIAGNOSTIC",
-)
 
 def test_is_pinging(fprime_test_api):
     """Test flight software is up and running
@@ -28,96 +19,92 @@ def test_is_pinging(fprime_test_api):
         "FlightComputer.pingRcvr.PR_NumPings", timeout=3
     )
 
-# def test_bd_cycles_ascending(fprime_test_api):
-#     """Test in-order block driver updates"""
-#     length = 10
-#     count_pred = predicates.greater_than(length - 1)
-#     results = fprime_test_api.await_telemetry_count(
-#         count_pred, "FlightComputer.blockDrv.BD_Cycles", timeout=length
-#     )
-#     last = None
-#     reordered = False
-#     ascending = True
-#     for result in results:
-#         if last is not None:
-#             last_time = last.get_time()
-#             result_time = result.get_time()
-#             if result_time - last_time > 1.5:
-#                 msg = "FSW didn't send an update between {} and {}".format(
-#                     last_time.to_readable(), result_time.to_readable()
-#                 )
-#                 fprime_test_api.log(msg)
-#             elif result_time < last_time:
-#                 msg = "There is potential reorder error between {} and {}".format(
-#                     last_time, result_time
-#                 )
-#                 fprime_test_api.log(msg)
-#                 reordered = True
-
-#             if not result.get_val() > last.get_val():
-#                 msg = "Not all updates ascended: First ({}) Second ({})".format(
-#                     last.get_val(), result.get_val()
-#                 )
-#                 fprime_test_api.log(msg)
-#                 ascending = False
-
-#         last = result
-
-#     case = True
-#     case &= fprime_test_api.test_assert(
-#         ascending, "Expected all updates to ascend.", True
-#     )
-#     case &= fprime_test_api.test_assert(
-#         not reordered, "Expected no updates to be dropped.", True
-#     )
-#     fprime_test_api.predicate_assert(
-#         count_pred,
-#         len(results) - 1,
-#         "Expected >= {} updates".format(length - 1),
-#         True,
-#     )
-#     fprime_test_api.assert_telemetry_count(0, "rateGroup1Comp.RgCycleSlips")
-#     assert case, "Expected all checks to pass (ascending, reordering). See log."
-
-def test_flight_state(fprime_test_api):
-    """Test flight software is up and running
-
-    Tests that the flight software is streaming by looking for 5 telemetry items in 10 seconds. Additionally,
-    "FlightComputer.sendBuffComp.SendState" is verified to be SEND_IDLE.
+def assert_and_wait_for_condition(fprime_test_api, channel, condition, assert_timeout, condition_timeout):
     """
-    """Test that commands may be sent
+    Asserts that telemetry is received within assert_timeout, then waits for a condition to be true within condition_timeout.
 
-    Tests command send, dispatch, and receipt using send_and_assert command with a pair of NO-OP commands.
+    :param fprime_test_api: The fprime test API object
+    :param channel: The telemetry channel to monitor
+    :param condition: A lambda function that takes the telemetry value and returns a boolean
+    :param assert_timeout: Timeout for receiving initial telemetry (in seconds)
+    :param condition_timeout: Timeout for the condition to become true (in seconds)
+    :return: The telemetry value that satisfied the condition
     """
-    length = 10
-    any_reordered = False
-    dropped = False
-    evr_seq = [
-        "FlightComputer.cmdDisp.OpCodeDispatched",
-        # "FlightComputer.cmdDisp.NoOpReceived",
-        "FlightComputer.cmdDisp.OpCodeCompleted",
-    ]
-    for i in range(0, length):
-        time.sleep(0.5)
-        results = fprime_test_api.send_and_await_event(
+
+    # Now, wait for the condition to be true, checking periodically
+    start_time = time.time()
+    tlm_time = None
+    while time.time() - start_time < condition_timeout:
+        tlm = fprime_test_api.assert_telemetry(channel, time_pred=tlm_time, timeout=assert_timeout)
+        tlm_time = tlm.time
+        fprime_test_api.log(f"Received initial telemetry: {tlm.get_val()} @ {tlm.time}")
+        fprime_test_api.clear_histories()
+        if tlm:
+            telemetry_value = tlm.get_val()
+            if condition(telemetry_value):
+                fprime_test_api.log(f"Condition met: {telemetry_value}")
+                return telemetry_value
+            else:
+                fprime_test_api.log(f"Condition not yet met: {telemetry_value}")
+        time.sleep(0.1)  # Wait a short time before checking again
+
+    # If we've reached here, the condition wasn't met within the timeout
+    fprime_test_api.log(f"Condition not met within {condition_timeout} seconds")
+    raise AssertionError(f"Condition not met within {condition_timeout} seconds")
+
+def test_flight_state_machine(fprime_test_api):
+    """Tests that the flight state machine transitions correctly"""
+
+    repeat_num = 1
+    test_repeat_delay_s = 0.5
+
+    for i in range(repeat_num):
+        # Verify initial condition
+        assert_and_wait_for_condition(
+            fprime_test_api,
+            "FlightComputer.flightSequencer.flightStatus",
+            lambda x: not x['isEngineOn'] and x['currentState'] == 'IDLE',
+            assert_timeout=5,
+            condition_timeout=10
+        )
+
+        # Send IGNITE signal
+        # fprime_test_api.send_command("FlightComputer.flightSequencer.IGNITE")
+        fprime_test_api.send_and_await_event(
             "FlightComputer.flightSequencer.IGNITE", timeout=5
         )
-        msg = "Send and assert IGNITE Trial #{}".format(i)
-        fprime_test_api.log("Results {}".format(results))
-        fprime_test_api.assert_telemetry(
-                "flightSequencer.flightStatus", timeout=5
+
+        # Validate desired conditions after IGNITE
+        fprime_test_api.log(f"Validate desired conditions after IGNITE")
+        assert_and_wait_for_condition(
+            fprime_test_api,
+            "FlightComputer.flightSequencer.flightStatus",
+            lambda x: x['isEngineOn'] and x['currentState'] == 'FIRING',
+            assert_timeout=3,
+            condition_timeout=10
         )
 
-        pred = fprime_test_api.get_telemetry_pred("FlightComputer.flightSequencer.flightStatus")
-        # result = fprime_test_api.assert_telemetry(pred, timeout=5)
-        result = fprime_test_api.await_telemetry("flightSequencer.flightStatus", timeout=5)
-        fprime_test_api.log("result found {}".format(result))
-        # fprime_test_api.log("pred found {}".format(pred))
-        items = fprime_test_api.get_telemetry_test_history().retrieve_new()
-        last = None
-        reordered = False
-        fprime_test_api.log("items found {}".format(items))
-        for item in items:
-                fprime_test_api.log("item found {}".format(item))
+        # Monitor until GLIDING state
+        fprime_test_api.log(f"Monitor until GLIDING state")
+        assert_and_wait_for_condition(
+            fprime_test_api,
+            "FlightComputer.flightSequencer.flightStatus",
+            lambda x: x['currentState'] == 'GLIDING',
+            assert_timeout=3,
+            condition_timeout=10
+        )
 
-        # fprime_test_api.clear_histories()
+        # Monitor until IDLE state and altitude below 0
+        fprime_test_api.log(f"Monitor until IDLE state and altitude below 0")
+        final_state = assert_and_wait_for_condition(
+            fprime_test_api,
+            "FlightComputer.flightSequencer.flightStatus",
+            lambda x: x['currentState'] == 'IDLE' and x['altitudeM'] < 0,
+            assert_timeout=3,
+            condition_timeout=30
+        )
+
+        fprime_test_api.log(f"Flight cycle {i+1} completed. Final state: {final_state}")
+        time.sleep(test_repeat_delay_s)
+
+    fprime_test_api.log("All flight cycles completed successfully.")
