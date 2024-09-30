@@ -16,7 +16,7 @@ module FlightComputer {
         # flightTimeS: F32
         isEngineOn: bool
         altitudeM: F32
-        # velocityMS: F64
+        velocityMS: F32
         currentState: FlightSMStates
     }
 
