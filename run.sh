@@ -257,7 +257,7 @@ case $1 in
     eval "${CMD}"
     ;;
   "exec")
-    FLAGS="${START_MODE} --user $(id -u):$(id -g)"
+    FLAGS="${START_MODE} --user $(id -u):$(id -g) --no-deps"
     RUN_CMD=""
     if [ "${DEBUG}" -eq "1" ]; then
       RUN_CMD="gdbserver :${GDB_PORT} "
@@ -302,7 +302,7 @@ case $1 in
     fi
     FLAGS="-w ${BIN_DIR}"
 
-    CMD="fprime-gds -n --ip-port=$UPLINK_TARGET_PORT --tts-port=$DOWNLINK_TARGET_PORT --dictionary ./dict/FlightComputerTopologyAppDictionary.xml"
+    CMD="fprime-gds -n --ip-port=$UPLINK_TARGET_PORT --tts-port=$DOWNLINK_TARGET_PORT --dictionary ./dict/FlightComputerTopologyDictionary.json"
     CMD="docker compose run -it --rm gds $CMD"
     echo $CMD
     eval $CMD

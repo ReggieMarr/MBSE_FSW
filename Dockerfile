@@ -64,18 +64,16 @@ RUN git submodule foreach --recursive '\
 # Sync the updated submodule configurations
 RUN git submodule sync --recursive
 
-RUN cd ..
 RUN git submodule update --init --recursive --depth 1 --recommend-shallow
 ENV FPRIME_FRAMEWORK_PATH=$FSW_WDIR/fprime
 
-# # Setup environment
+# Setup environment
 ENV PATH="/home/user/.local/bin:${PATH}"
 # Install Python packages
-USER root
-RUN pip install setuptools setuptools_scm wheel pip fprime-tools && \
+RUN pip install setuptools setuptools_scm wheel pip fprime-tools --upgrade && \
     pip install -r $FSW_WDIR/fprime/requirements.txt && \
     pip install -e $FSW_WDIR/fprime-gds && \
-    pip install pytest debugpy pyinfra asyncio asyncssh gitpython python-dotenv
+    pip install pytest debugpy pyinfra asyncio asyncssh gitpython python-dotenv --upgrade
 
 FROM fprime_src AS stars_base
 
