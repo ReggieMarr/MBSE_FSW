@@ -87,6 +87,7 @@ jobs:
         echo "Using image ${{ env.FSW_IMG }}"
         ./run.sh build --clean
         DOWNLINK_TARGET_PORT=50051 UPLINK_TARGET_PORT=50001 ./run.sh exec --local --daemon
+        ./run.sh test
         ./run.sh teardown
 
     - name: Upload artifacts

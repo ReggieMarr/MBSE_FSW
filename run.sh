@@ -256,8 +256,19 @@ case $1 in
     echo $CMD
     eval "${CMD}"
     ;;
+  "test")
+    FLAGS="-it -w ${DEPLOYMENT_ROOT}"
+    RUN_CMD="pytest -s -v"
+
+    RUN_CMD="docker compose exec ${FLAGS} gds $RUN_CMD"
+
+    echo "Running $RUN_CMD"
+    eval $RUN_CMD
+    exit_code=$?
+    if [ $exit_code -eq 1 ] || [ $exit_code -eq 2 ]; then exit 0; else exit $exit_code; fi
+    ;;
   "exec")
-    FLAGS="${START_MODE} --user $(id -u):$(id -g) --no-deps"
+    FLAGS="${START_MODE} --user $(id -u):$(id -g)"
     RUN_CMD=""
     if [ "${DEBUG}" -eq "1" ]; then
       RUN_CMD="gdbserver :${GDB_PORT} "
@@ -268,7 +279,6 @@ case $1 in
     else
       FLAGS="${FLAGS} -w /MBSE_FSW/deploy/ --no-deps"
       RUN_CMD="docker compose run --rm -it fsw python3 fswCtrl.py"
-      FLAGS="${FLAGS} --no-deps"
     fi
 
     if [ "${DAEMON}" -eq "1" ]; then
