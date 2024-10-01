@@ -7,52 +7,6 @@ cd $SCRIPT_DIR
 set -e
 set -o pipefail
 
-# URL to the guide for getting the access token
-GUIDE_URL="https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html"
-
-token_check() {
-  # Check if GIT_ACCESS_TOKEN is set
-  if [ -z "$GIT_ACCESS_TOKEN" ]; then
-      echo "Error: GIT_ACCESS_TOKEN is not set."
-      echo "Please follow these steps:"
-      echo "1. Visit $GUIDE_URL to learn how to create a personal access token."
-      echo "2. After creating the token, add it to your ~/.bashrc file like this:"
-      echo "   echo 'export GIT_ACCESS_TOKEN=your_token_here' >> ~/.bashrc"
-      echo "3. Then, reload your bashrc with: source ~/.bashrc"
-      echo "4. Finally, run this script again."
-      exit 1
-  fi
-
-  # Function to check if the token is valid
-  is_token_valid() {
-      # Replace this URL with your actual Git server URL
-      local git_server="https://git.reactiondynamics.space"
-
-      # Attempt to access the API with the token
-      local response=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $GIT_ACCESS_TOKEN" "$git_server/api/v4/user")
-
-      if [ "$response" = "200" ]; then
-          return 0  # Token is valid
-      else
-          return 1  # Token is invalid
-      fi
-  }
-
-  # Check if the token is valid
-  if ! is_token_valid; then
-      echo "Error: The GIT_ACCESS_TOKEN appears to be invalid (or network unavailable)."
-      echo "Please ensure you've set the correct token and that it has the necessary permissions."
-      echo "You can get a new token by visiting: $GUIDE_URL"
-      echo "After getting a new token, update it in your ~/.bashrc file:"
-      echo "1. Open ~/.bashrc in a text editor"
-      echo "2. Find the line that exports GIT_ACCESS_TOKEN and update it:"
-      echo "   export GIT_ACCESS_TOKEN=your_new_token_here"
-      echo "3. Save the file and run: source ~/.bashrc"
-      echo "4. Then, run this script again."
-      exit 1
-  fi
-}
-
 check_port() {
     local port=$1
     if netstat -ano | grep ":$port "; then
@@ -160,10 +114,6 @@ case $1 in
     docker pull $FSW_IMG
     ;;
   "docker-build")
-    # if ! token_check; then
-    #   echo "Failed Git access token check, cannot build docker image"
-    #   exit 1
-    # fi
 
     # Check for unstaged changes
     if ! git diff-index --quiet HEAD --; then
@@ -203,10 +153,6 @@ case $1 in
     eval "$CMD"
     ;;
   "build")
-    # if ! token_check; then
-    #   echo "Failed Git access token check, cannot build docker image"
-    #   exit 1
-    # fi
 
     BUILD_FLIGHT_SW="fprime-util build -j10"
     # For building we don't need dependent containers

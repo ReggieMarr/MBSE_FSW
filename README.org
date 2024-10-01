@@ -19,8 +19,9 @@ cd MBSE_FSW
 #pull in the submodules
 git submodule update --init --recursive
 #+END_SRC
+
 ** Example Usage
-The flight software ships with a script ~run.sh~ which can be used to simplify development and interaction with this repo's assets.
+The flight software ships with a script run.sh  which can be used to simplify development and interaction with this repo's assets.
 Commands are summarized as such:
 
 #+begin_src plantuml :file .org_out/run.png :tangle .org_out/run.puml :exports results
@@ -36,6 +37,10 @@ rectangle "run.sh Script" {
   [GDS Execution]
   [Dependency Generation]
   [Environment Teardown]
+  [Update]
+  [Sync]
+  [Test]
+  [Topology Visualization]
 }
 
 cloud "Docker Environment" {
@@ -57,6 +62,10 @@ User --> [FlightSoftware Execution] : exec
 User --> [GDS Execution] : gds
 User --> [Dependency Generation] : gen-deps
 User --> [Environment Teardown] : teardown
+User --> [Update] : update
+User --> [Sync] : sync
+User --> [Test] : test
+User --> [Topology Visualization] : topology
 
 [Docker Build] --> [Docker Image] : Creates/Updates
 [Project Build] --> [Build Artifacts] : Generates
@@ -65,6 +74,10 @@ User --> [Environment Teardown] : teardown
 [GDS Execution] --> [GDS Container] : Runs GDS
 [Dependency Generation] --> [Dependencies] : Extracts
 [Environment Teardown] --> [Docker Environment] : Removes containers
+[Update] --> [Docker Image] : Pulls latest images
+[Sync] --> [Docker Image] : Pushes local changes
+[Test] --> [GDS Container] : Runs tests
+[Topology Visualization] --> [Project Files] : Generates topology diagram
 
 @enduml
 #+end_src
@@ -86,6 +99,7 @@ Options:
   --daemon             Run as daemon
   --debug              Enable debug mode
   --as-host            Run as host
+  --persist            Ignore startup issues and keep running
   --local              Use local environment
   --clean              Clean build
   --host-thread-ctl    Set thread control
@@ -95,13 +109,17 @@ Commands:
   docker-build         Build the Docker image
   build                Build the project
   inspect [container]  Inspect a container
-  exec                 Execute the FlightSoftware
+  exec                 Execute the FlightComputer
   gds                  Run the GDS
+  update               Pulls the latest version of docker images
+  sync                 Pushes local changes and updates docker images
   gen-deps             Generate dependencies (for editor mapping)
   teardown             Tear down the environment
+  test                 Run tests
+  topology             Generate topology visualization
 #+END_SRC
 
-One use case is building and running the deployment, this can be done like so (note building clean is only necessary when ):
+One use case is building and running the deployment, this can be done like so (note building clean is only necessary when making significant changes):
 #+begin_src bash
 ❯ ./run.sh build --clean && ./run.sh exec --local
 #+end_src
@@ -123,7 +141,7 @@ More information about the Web UI can be found [[https://nasa.github.io/fprime/U
 * Flight Sequence State Machine
 The following state machine is fed as input to [[https://github.com/JPLOpenSource/STARS][STARS]] which then generates ~fpp~ and ~c++~ as output.
 
-#+BEGIN_SRC plantuml :tangle ./FlightSoftware/FlightSequencer/FlightSM.plantuml :exports both :file ./FlightComputer/FlightSequencer/FlightSM.png
+#+BEGIN_SRC plantuml :tangle ./FlightSoftware/FlightSequencer/FlightSM.plantuml :exports both :file .org_out/FlightSM.svg
 @startuml
 
 [*] --> IDLE:  /initFlightStatus()
@@ -159,4 +177,4 @@ IN_FLIGHT --> IDLE: TERMINATE
 #+END_SRC
 
 #+RESULTS:
-[[file:./FlightComputer/FlightSequence/FlightSM.png]]
+[[file:.org_out/FlightSM.png]]
