@@ -126,8 +126,6 @@ One use case is building and running the deployment, this can be done like so (n
 
 This then provides a web based ui that can be viewed by visiting http://127.0.0.1:5000/#Channels on your preferred web browser.
 
-[[file:.org_out/GDS_Screenshot.png][GDS Screenshot]]
-
 *Note* this example runs a standard version of ~fprime-gds~ and deploys it locally.
 More information about the Web UI can be found [[https://nasa.github.io/fprime/UsersGuide/gds/gds-introduction.html][here]].
 *** Additional Tips
@@ -177,4 +175,4 @@ IN_FLIGHT --> IDLE: TERMINATE
 #+END_SRC
 
 #+RESULTS:
-[[file:.org_out/FlightSM.png]]
+[[file:.org_out/FlightSM.svg]]
