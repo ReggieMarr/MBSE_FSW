@@ -83,7 +83,7 @@ run_docker_compose() {
 
 exec_fsw() {
     local target="$1"
-    local bin="./build-artifacts/Linux/${target}/bin/${target}"
+    local bin="${FSW_WDIR}/${target}/build-artifacts/Linux/${target}/bin/${target}"
     local cmd="$bin -a ${GDS_IP} -u ${UPLINK_TARGET_PORT} -d ${DOWNLINK_TARGET_PORT}"
 
     [ "$DEBUG" -eq 1 ] && cmd="gdbserver :${GDB_PORT} ${cmd}"
@@ -129,7 +129,9 @@ case $1 in
     [ "$CLEAN" -eq 1 ] && BUILD_CMD="fprime-util purge --force && fprime-util generate && $BUILD_CMD"
     [ "$AS_HOST" -eq 1 ] && eval "$BUILD_CMD" || run_docker_compose "fsw bash -c \"$BUILD_CMD\""
 
-    exec_cmd "sed -i \"s|/fsw|${SCRIPT_DIR}|g\" \"${SCRIPT_DIR}/build-fprime-automatic-native/compile_commands.json\""
+    MOD_DICT_CMD="sed -i \"s|/fsw|${SCRIPT_DIR}/FlightComputer|g\" \"${SCRIPT_DIR}/FlightComputer/build-fprime-automatic-native/compile_commands.json\""
+
+    exec_cmd "$MOD_DICT_CMD"
     ;;
 
   "inspect")
@@ -144,20 +146,17 @@ case $1 in
     [ -z "$EXEC_TARGET" ] && { echo "Error: must specify target to exec"; exit 1; }
 
     case $EXEC_TARGET in
-      "obcA"|"obcB")
+      "FlightComputer")
         exec_fsw "$EXEC_TARGET"
       ;;
       "gds")
         # check_port ${DOWNLINK_TARGET_PORT}
         # check_port ${UPLINK_TARGET_PORT}
 
-        # NOTE this is one of those cases that redo might handle better
-        run_docker_compose "fsw bash -c \"cd ./GDSDictionary/ && ./gendictionary.sh\""
-
-        DICT_PATH="./GDSDictionary/GDSDictionaryTopologyDictionary.json"
+        DICT_PATH="${DICT_DIR}FlightComputerTopologyDictionary.json"
         FLAGS+=" --dictionary ${DICT_PATH}"
         FLAGS+=" --no-app"
-        FLAGS+=" --ip-port=${UPLINK_TARGET_PORT} --tts-port=${DOWNLINK_TARGET_PORT}"
+        FLAGS+=" --ip-address 127.0.0.1 --ip-port=${UPLINK_TARGET_PORT} --tts-port=${DOWNLINK_TARGET_PORT}"
 
         GDS_CMD="fprime-gds ${FLAGS}"
         run_docker_compose "fsw bash -c \"$GDS_CMD\""
